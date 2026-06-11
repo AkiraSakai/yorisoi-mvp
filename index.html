@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ヨリソイ — ナラティブGPS</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 80px; }
+
+/* Header */
+header {
+  text-align: center;
+  padding: 40px 16px 28px;
+  background: linear-gradient(180deg, var(--cp-bg-elevated), var(--cp-bg));
+  border-bottom: 1px solid var(--cp-border);
+}
+.logo { font-size: 30px; font-weight: 800; letter-spacing: .04em; color: var(--cp-accent); }
+.logo small { font-size: 13px; font-weight: 600; color: var(--cp-text-muted); display:block; letter-spacing:.2em; margin-top:2px;}
+.tagline { font-size: 18px; font-weight: 700; margin-top: 14px; }
+.subline { font-size: 13.5px; color: var(--cp-text-muted); margin-top: 6px; }
+
+/* Tabs */
+.tabs {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;
+  padding: 10px 8px; margin: 0 -16px;
+  background: var(--cp-panel-strong);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--cp-border);
+}
+.tab {
+  font: inherit; font-size: 13.5px; font-weight: 600;
+  border: 1px solid transparent; border-radius: 999px;
+  padding: 8px 15px; cursor: pointer;
+  background: transparent; color: var(--cp-text-muted);
+  transition: all .15s;
+}
+.tab:hover { color: var(--cp-text); background: var(--cp-surface-soft); }
+.tab.active { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+
+.panel { display: none; padding-top: 28px; }
+.panel.active { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px);} to {opacity:1;transform:none;} }
+
+.section-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.section-desc { font-size: 14px; color: var(--cp-text-muted); margin-bottom: 18px; }
+
+.card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  margin-bottom: 16px;
+}
+
+/* Translator */
+.seg { display: flex; gap: 6px; margin-bottom: 14px; }
+.seg button {
+  flex: 1; font: inherit; font-size: 14px; font-weight: 700;
+  padding: 11px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--cp-border); background: var(--cp-surface-soft);
+  color: var(--cp-text-muted); transition: all .15s;
+}
+.seg button.active { background: var(--cp-accent-soft); color: var(--cp-accent); border-color: var(--cp-accent); }
+
+textarea {
+  width: 100%; font: inherit; font-size: 15px; resize: vertical; min-height: 96px;
+  padding: 13px 14px; border-radius: 10px; border: 1px solid var(--cp-border);
+  background: var(--cp-bg-elevated); color: var(--cp-text);
+}
+textarea:focus { outline: 2px solid var(--cp-accent); border-color: transparent; }
+
+.btn {
+  font: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+  border: none; border-radius: 10px; padding: 12px 20px;
+  background: var(--cp-accent); color: var(--cp-accent-fg);
+  transition: background .15s; margin-top: 12px; width: 100%;
+}
+.btn:hover { background: var(--cp-accent-hover); }
+.btn.ghost { background: var(--cp-surface-soft); color: var(--cp-text); border: 1px solid var(--cp-border); }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 0; }
+.chip {
+  font: inherit; font-size: 12.5px; cursor: pointer;
+  border: 1px solid var(--cp-border); border-radius: 999px;
+  padding: 5px 11px; background: var(--cp-bg-elevated); color: var(--cp-text-muted);
+}
+.chip:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.chip.sel { background: var(--cp-accent-soft); border-color: var(--cp-accent); color: var(--cp-accent); font-weight: 700; }
+
+/* Oasis rows */
+.oasis-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--cp-border); font-size: 14px; }
+.oasis-row:last-of-type { border-bottom: none; }
+.oasis-ic { font-size: 18px; flex-shrink: 0; line-height: 1.5; }
+.oasis-row b { color: var(--cp-text); font-size: 13px; }
+
+/* Result */
+#result { margin-top: 18px; }
+.res-block { margin-bottom: 16px; }
+.res-label { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--cp-text-soft); text-transform: uppercase; margin-bottom: 6px; }
+.intent {
+  background: var(--cp-accent-soft); border-left: 4px solid var(--cp-accent);
+  padding: 12px 14px; border-radius: 0 10px 10px 0; font-size: 15px; font-weight: 600;
+}
+.meter { display: flex; align-items: center; gap: 8px; }
+.dots { display: flex; gap: 4px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--cp-border); }
+.dot.on1 { background: var(--cp-success); }
+.dot.on2 { background: var(--cp-warning); }
+.dot.on3 { background: var(--cp-danger); }
+.meter-label { font-size: 13.5px; font-weight: 700; }
+.reply {
+  background: var(--cp-bg-elevated); border: 1px solid var(--cp-border);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; position: relative;
+}
+.reply .tone { font-size: 11.5px; font-weight: 700; color: var(--cp-accent); margin-bottom: 4px; }
+.reply .txt { font-size: 14.5px; }
+.copy {
+  position: absolute; top: 10px; right: 10px; font: inherit; font-size: 11.5px;
+  cursor: pointer; border: 1px solid var(--cp-border); border-radius: 7px;
+  padding: 3px 9px; background: var(--cp-surface); color: var(--cp-text-muted);
+}
+.copy:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.tip { font-size: 13px; color: var(--cp-text-muted); background: var(--cp-surface-soft); border-radius: 10px; padding: 11px 13px; }
+.tip b { color: var(--cp-text); }
+
+/* Mine map grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; }
+.topic {
+  border: 1px solid var(--cp-border); border-radius: 14px; padding: 16px; cursor: pointer;
+  background: var(--cp-surface); text-align: center; transition: all .15s;
+}
+.topic:hover { border-color: var(--cp-accent); transform: translateY(-2px); }
+.topic .emoji { font-size: 28px; }
+.topic .name { font-weight: 700; margin-top: 6px; font-size: 14.5px; }
+.topic .lv { font-size: 11.5px; color: var(--cp-text-muted); margin-top: 2px; }
+
+/* Self-update cards */
+.flip { perspective: 1000px; height: 150px; cursor: pointer; }
+.flip-in { position: relative; width: 100%; height: 100%; transition: transform .5s; transform-style: preserve-3d; }
+.flip.flipped .flip-in { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute; inset: 0; backface-visibility: hidden;
+  border: 1px solid var(--cp-border); border-radius: 14px; padding: 16px;
+  display: flex; flex-direction: column; justify-content: center; background: var(--cp-surface);
+}
+.flip-back { transform: rotateY(180deg); background: var(--cp-accent-soft); }
+.flip-q { font-weight: 700; font-size: 15px; }
+.flip-hint { font-size: 12px; color: var(--cp-text-muted); margin-top: 8px; }
+.flip-a { font-size: 13.5px; }
+
+/* Mental check */
+.q { margin-bottom: 14px; }
+.q p { font-weight: 600; font-size: 14.5px; margin-bottom: 8px; }
+.opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.opts label {
+  font-size: 13px; border: 1px solid var(--cp-border); border-radius: 999px;
+  padding: 6px 13px; cursor: pointer; transition: all .15s;
+}
+.opts input { display: none; }
+.opts input:checked + span { font-weight: 700; }
+.opts label:has(input:checked) { background: var(--cp-accent-soft); border-color: var(--cp-accent); color: var(--cp-accent); }
+.score-box { text-align: center; padding: 20px; }
+.score-num { font-size: 40px; font-weight: 800; color: var(--cp-accent); }
+
+.footnote { text-align: center; font-size: 12px; color: var(--cp-text-soft); margin-top: 30px; }
+
+/* Concept banner */
+.concept { background: var(--cp-bg-elevated); border: 1px solid var(--cp-border); border-radius: 16px; padding: 18px; margin-bottom: 20px; }
+.concept-flow { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.cf { flex: 1; min-width: 110px; text-align: center; background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 12px; padding: 10px 8px; font-weight: 700; font-size: 14.5px; }
+.cf small { display: block; font-weight: 500; font-size: 11.5px; color: var(--cp-text-muted); margin-top: 3px; line-height: 1.4; }
+.cf.bad { border-color: var(--cp-danger); }
+.cf.bad small { color: var(--cp-danger); }
+.arrow { align-self: center; font-size: 18px; color: var(--cp-text-soft); }
+.concept-note { font-size: 13px; color: var(--cp-text-muted); margin-top: 14px; text-align: center; }
+.concept-note b { color: var(--cp-accent); }
+@media (max-width: 520px){ .arrow { transform: rotate(90deg); } .concept-flow { flex-direction: column; } }
+.pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:999px; background:var(--cp-highlight); color:var(--cp-accent); margin-left:6px; vertical-align:middle;}
+.toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--cp-text); color: var(--cp-bg); padding: 10px 18px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 600; opacity: 0; pointer-events: none; transition: all .25s; z-index: 100;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ヨリソイ<small>NARRATIVE GPS</small></div>
+  <div class="tagline">あなたと相手の「物語」の現在地を示し、断絶しないルートを案内する。</div>
+  <div class="subline">親子の“通じなさ”を、どちらも責めずにナビゲートするメンタル総合サービス</div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="translate">🧭 GPSルート案内</button>
+    <button class="tab" data-tab="oasis">🌿 オアシス発見</button>
+    <button class="tab" data-tab="mine">💣 断絶ポイント地図</button>
+    <button class="tab" data-tab="update">🔄 セルフアップデート</button>
+    <button class="tab" data-tab="mental">💗 メンタルチェック</button>
+  </nav>
+
+  <!-- TRANSLATOR -->
+  <section class="panel active" id="translate">
+    <div class="concept">
+      <div class="concept-flow">
+        <span class="cf">👵 親<small>「自分が正しい」と信じている</small></span>
+        <span class="arrow">→</span>
+        <span class="cf">🧑 子<small>それを苦痛に感じる</small></span>
+        <span class="arrow">→</span>
+        <span class="cf bad">↔️ 距離<small>互いに離れ、断絶へ</small></span>
+      </div>
+      <div class="concept-note">ナラティブGPSは、どちらかを「直す」のではなく、<b>2人の物語（価値観の地図）の現在地</b>を映し、<b>断絶しない迂回ルート</b>を案内します。</div>
+    </div>
+
+    <div class="section-title">ナラティブGPS ／ ルート案内</div>
+    <div class="section-desc">親や子から言われた一言を貼ると、<b>相手の現在地（真意）</b>・<b>断絶リスク</b>・<b>角が立たない迂回ルート（返信案）</b>を案内します。</div>
+
+    <div class="card">
+      <div class="seg" id="dir">
+        <button class="active" data-dir="p2c">👵 親 → 私（子）に言われた</button>
+        <button data-dir="c2p">🧑 私（子） → 親 に伝えたい</button>
+      </div>
+      <textarea id="input" placeholder="例：そろそろ結婚しないの？　いつになったら孫の顔見せてくれるの？"></textarea>
+      <div class="chips" id="examples"></div>
+      <button class="btn" id="go">翻訳する</button>
+    </div>
+
+    <div id="result"></div>
+  </section>
+
+  <!-- OASIS -->
+  <section class="panel" id="oasis">
+    <div class="section-title">オアシス発見 — 親の"好き"がわかる</div>
+    <div class="section-desc">断絶ポイントの逆。<b>関係を充電できる安全な話題＝オアシス</b>を見つけます。親の生まれた年代と「好きなこと」を選んでください。</div>
+
+    <div class="card">
+      <div class="res-label">① 親が生まれた年代</div>
+      <div class="seg" id="era" style="flex-wrap:wrap"></div>
+      <div class="res-label" style="margin-top:14px">② 好きなこと・関心（複数OK）</div>
+      <div class="chips" id="interestChips" style="margin-top:8px"></div>
+      <button class="btn" id="oasisGo">オアシスを見つける</button>
+    </div>
+
+    <div id="oasisResult"></div>
+  </section>
+
+  <!-- MINE MAP -->
+  <section class="panel" id="mine">
+    <div class="section-title">断絶ポイント地図</div>
+    <div class="section-desc">親子の物語が衝突しやすい「危険交差点」と、その<b>迂回の歩き方</b>。タップで開きます。</div>
+    <div class="grid" id="mineGrid"></div>
+    <div id="mineDetail"></div>
+  </section>
+
+  <!-- SELF UPDATE -->
+  <section class="panel" id="update">
+    <div class="section-title">セルフ・アップデート</div>
+    <div class="section-desc">「知らなかっただけ」を責めずに埋める、今どきの常識カード。タップで答えが見えます。<span class="pill">あなたは悪くない</span></div>
+    <div class="grid" id="updateGrid"></div>
+  </section>
+
+  <!-- MENTAL -->
+  <section class="panel" id="mental">
+    <div class="section-title">メンタルチェック</div>
+    <div class="section-desc">最近の「親子のやり取りのしんどさ」を5問でセルフチェック。結果に応じて次の一歩を提案します。</div>
+    <div class="card" id="quiz"></div>
+    <div id="mentalResult"></div>
+  </section>
+
+  <div class="footnote">
+    ヨリソイ / ナラティブGPS — MVPプロトタイプ（コンセプト検証用デモ）。<br>実サービスでは AI による文脈翻訳と、公認心理師・傾聴員へのエスカレーションを実装します。
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ DATA: translation engine ============ */
+// topic = キーワードで判定する話題。dir ごとに 真意/地雷度/なぜ/返信案/tip を持つ。
+const TOPICS = [
+  {
+    id:"marriage", emoji:"💍", name:"結婚・恋愛", lv:3,
+    kw:["結婚","彼氏","彼女","恋人","付き合","独身","お見合い","婚活","相手"],
+    p2c:{
+      level:3,
+      intent:"「あなたが一人で寂しくないか／将来困らないか」が心配。結婚そのものより“あなたの幸せと安心”を確認したい。",
+      why:"親世代は「結婚＝安定・幸せの証」という価値観で育っており、急かす＝愛情表現になりがち。",
+      replies:[
+        {tone:"やわらかく受け流す", txt:"心配してくれてありがとう。今は自分のペースで楽しくやってるよ。"},
+        {tone:"正直に線を引く", txt:"その話、私も考えてはいるんだけど、急かされると逆にしんどくなっちゃう。落ち着いたら自分から話すね。"},
+        {tone:"話題を変える", txt:"それより最近◯◯はどう？元気にしてる？"}
+      ],
+      tip:"「いつ？」には“時期”で答えず“気持ち”で返すと角が立ちません。"
+    },
+    c2p:{
+      level:2,
+      intent:"（あなたの真意）結婚の話で急かさないでほしい／今の生き方も認めてほしい。",
+      why:"正面から「うるさい」と言うと否定されたと感じて関係がこじれます。",
+      replies:[
+        {tone:"気持ちを主語に", txt:"心配してくれるの嬉しいよ。ただ、急かされると焦っちゃうから、見守ってもらえると助かる。"},
+        {tone:"安心材料を渡す", txt:"今は仕事も生活も充実してるし、ちゃんと自分の幸せは考えてるから安心してね。"},
+        {tone:"役割をお願いする", txt:"いい報告ができるときは一番に伝えるね。それまで応援団でいてくれる？"}
+      ],
+      tip:"「ほっといて」ではなく「見守って」に言い換えると、親は役割をもらえて安心します。"
+    }
+  },
+  {
+    id:"job", emoji:"💼", name:"仕事・転職", lv:2,
+    kw:["仕事","転職","会社","辞め","正社員","フリー","就職","働","残業","給料","年収"],
+    p2c:{
+      level:2,
+      intent:"「ちゃんと食べていけるのか／安定しているか」が不安。あなたの生活基盤を守りたい。",
+      why:"終身雇用世代にとって転職・フリーランスは“リスク”に見え、安定＝大企業・正社員という地図のまま。",
+      replies:[
+        {tone:"やわらかく受け流す", txt:"ちゃんと考えて決めたことだから大丈夫。心配かけてごめんね。"},
+        {tone:"安心材料を渡す", txt:"収入も生活も問題ないよ。今の働き方、自分には合ってるんだ。"},
+        {tone:"今の常識を伝える", txt:"今は転職も珍しくなくて、むしろキャリアアップになることも多いんだよ。"}
+      ],
+      tip:"数字（収入・貯金）を少し見せると、親の“安定不安”は一気に下がります。"
+    },
+    c2p:{
+      level:2,
+      intent:"（あなたの真意）自分の選んだ働き方を否定せず応援してほしい。",
+      why:"「時代が違う」と突き放すと、親は理解を諦めて距離ができます。",
+      replies:[
+        {tone:"背景を共有", txt:"心配だよね。でも今はこういう働き方が普通になってて、私もちゃんと納得して選んでるよ。"},
+        {tone:"安心材料を渡す", txt:"生活は安定してるから大丈夫。困ったら必ず相談するね。"},
+        {tone:"理解をお願い", txt:"応援してくれると一番心強いんだ。"}
+      ],
+      tip:"親の不安の正体はたいてい「お金」と「世間体」。先回りで両方に触れると効きます。"
+    }
+  },
+  {
+    id:"money", emoji:"💰", name:"お金・節約", lv:2,
+    kw:["お金","貯金","無駄遣い","節約","ローン","借金","投資","保険","家計","もったいない"],
+    p2c:{
+      level:2,
+      intent:"「将来お金で苦労しないか」が心配。倹約こそ安全という信念からの助言。",
+      why:"バブル崩壊・低金利を生き抜いた世代は「貯める＝正義／使う＝危険」の地図を持っています。",
+      replies:[
+        {tone:"やわらかく受け流す", txt:"アドバイスありがとう。ちゃんと計画立ててやってるから安心して。"},
+        {tone:"価値観を共有", txt:"貯めるのも大事だけど、今しかできない経験にも使いたいんだ。"},
+        {tone:"今の常識を伝える", txt:"今は貯金だけじゃなくて、少しずつ投資で備えるのも普通になってきてるよ。"}
+      ],
+      tip:"「浪費」ではなく「自己投資・経験」と言い換えると衝突が減ります。"
+    },
+    c2p:{
+      level:1,
+      intent:"（あなたの真意）お金の使い方に口を出しすぎないでほしい。",
+      why:"反発すると「育て方が悪かった」と自責させてしまうことも。",
+      replies:[
+        {tone:"感謝＋線引き", txt:"心配ありがとう。家計はちゃんと管理できてるから、そこは任せてもらえる？"},
+        {tone:"安心材料を渡す", txt:"貯金も投資もバランス見てやってるよ。"},
+        {tone:"教えを請う形に", txt:"逆にお父さん（お母さん）の節約のコツ、今度教えてよ。"}
+      ],
+      tip:"アドバイスを“求める側”に回ると、親の口出しが対等な会話に変わります。"
+    }
+  },
+  {
+    id:"digital", emoji:"📱", name:"スマホ・ネット", lv:2,
+    kw:["スマホ","携帯","ライン","LINE","SNS","ネット","アプリ","パソコン","使い方","設定","詐欺","怪しい"],
+    p2c:{
+      level:1,
+      intent:"「使い方がわからなくて困っている／取り残されたくない」。本当は教えてほしいサイン。",
+      why:"わからないと言い出しにくく、つい不機嫌や「もういい」で表現してしまう。",
+      replies:[
+        {tone:"歩幅を合わせる", txt:"一緒にやってみよう。ゆっくりで大丈夫だよ。"},
+        {tone:"安心させる", txt:"わからなくて当たり前だよ。何度でも聞いて。"},
+        {tone:"自信を持たせる", txt:"前より全然できるようになってるよ、すごいね。"}
+      ],
+      tip:"「なんでわからないの」は禁句。“一緒に”と“何度でも”が魔法の言葉。"
+    },
+    c2p:{
+      level:2,
+      intent:"（あなたの真意：親に教える側）イライラせず、安全にネットを使ってほしい。",
+      why:"早口・専門用語・「さっき言ったでしょ」は親を萎縮させ、断絶を深めます。",
+      replies:[
+        {tone:"手順を一つずつ", txt:"まずこのボタンだけ押してみて。次は私がやるから見てて。"},
+        {tone:"安全を優先", txt:"知らない番号やリンクは、押す前に一回見せてくれる？それだけで詐欺はほぼ防げるよ。"},
+        {tone:"ねぎらう", txt:"覚えること多いのに頑張ってるね。"}
+      ],
+      tip:"“1回1操作”。情報量を減らすほど、親は自信を取り戻します。"
+    }
+  },
+  {
+    id:"grandchild", emoji:"👶", name:"孫・出産", lv:3,
+    kw:["孫","子供","子ども","出産","妊娠","産む","赤ちゃん","跡継ぎ"],
+    p2c:{
+      level:3,
+      intent:"「家族が増える喜びを味わいたい／あなたの幸せな姿が見たい」。期待と寂しさの裏返し。",
+      why:"孫＝人生の楽しみ・役割と捉える世代ほど、無自覚にプレッシャーを与えてしまう。",
+      replies:[
+        {tone:"気持ちだけ受け取る", txt:"楽しみにしてくれてるんだね。その気持ちは嬉しいよ。"},
+        {tone:"正直に線を引く", txt:"これは私たち夫婦（私）のタイミングで考えたいことだから、見守ってもらえると嬉しい。"},
+        {tone:"話題を変える", txt:"今度みんなでご飯でも行こうよ。"}
+      ],
+      tip:"出産・不妊はセンシティブ。事情がある場合もあるので“タイミングは私が決める”を穏やかに固定。"
+    },
+    c2p:{
+      level:3,
+      intent:"（あなたの真意）孫の話はもう繰り返さないでほしい／そっとしておいてほしい。",
+      why:"強く拒むと親も傷つき、双方が口をきけなくなるリスク。",
+      replies:[
+        {tone:"一度きちんと伝える", txt:"その話、私にとっては結構プレッシャーなんだ。気持ちは分かるけど、もう聞かないでもらえると助かる。"},
+        {tone:"代わりの関わりを提案", txt:"孫の話の代わりに、今の私の話も聞いてくれると嬉しいな。"},
+        {tone:"愛情は受け取る", txt:"心配してくれてるのは分かってるよ、ありがとう。"}
+      ],
+      tip:"“一度だけ真剣に”。毎回受け流すより、一回はっきり線を引く方が長期的に楽になります。"
+    }
+  },
+  {
+    id:"health", emoji:"🩺", name:"体調・健康", lv:1,
+    kw:["体調","健康","病気","痩せ","太","ご飯","食べ","睡眠","休","顔色","疲れ"],
+    p2c:{
+      level:1,
+      intent:"「ちゃんと食べて寝ているか」が気がかり。健康を気遣う＝親の根源的な愛情。",
+      why:"離れて暮らすと様子が見えず、不安が小言の形で出てしまう。",
+      replies:[
+        {tone:"素直に受け取る", txt:"気にかけてくれてありがとう。ちゃんと食べてるよ。"},
+        {tone:"安心材料を渡す", txt:"この前健康診断も問題なかったから大丈夫。"},
+        {tone:"逆に気遣う", txt:"そっちこそ無理しないでね。"}
+      ],
+      tip:"健康の話は数少ない“素直に喜んでいい”小言。受け取るだけで関係が温まります。"
+    },
+    c2p:{
+      level:2,
+      intent:"（あなたの真意：親へ）年齢的に心配。無理せず受診・休養してほしい。",
+      why:"「病院行きなよ」だけだと“年寄り扱い”と反発されがち。",
+      replies:[
+        {tone:"主語を自分に", txt:"私が心配だから、一回だけ検査受けてくれると安心するんだ。"},
+        {tone:"ハードルを下げる", txt:"予約は私がやるよ。付き添うから一緒に行こう。"},
+        {tone:"敬意を込める", txt:"いつも元気でいてくれるのが一番嬉しいからさ。"}
+      ],
+      tip:"「あなたのため」より「私が安心したいから」。主語を自分にすると素直に聞いてくれます。"
+    }
+  },
+  {
+    id:"values", emoji:"⚖️", name:"価値観・生き方", lv:2,
+    kw:["普通","常識","世間","みんな","非常識","だらしない","甘い","世の中","昔は","当たり前","べき"],
+    p2c:{
+      level:2,
+      intent:"「自分の信じてきた“正しさ”であなたを守りたい」。否定ではなく不安の表現。",
+      why:"「普通は」「常識的に」は、親が育った時代の地図を共有しようとする言葉。悪意ではない。",
+      replies:[
+        {tone:"価値観を否定しない", txt:"そういう考え方もあるよね。私はちょっと違う見方をしてるけど、教えてくれてありがとう。"},
+        {tone:"並べて置く", txt:"昔と今で“普通”が変わってきてる部分もあると思うんだ。"},
+        {tone:"共通点を探す", txt:"目指してるもの（私の幸せ）は一緒だよね。"}
+      ],
+      tip:"「普通」「常識」が出たら、勝ち負けにせず“地図が違うだけ”と捉えると消耗しません。"
+    },
+    c2p:{
+      level:2,
+      intent:"（あなたの真意）価値観を押し付けないで、今の私を認めてほしい。",
+      why:"真っ向から「時代遅れ」と言うと、親は人格否定と受け取ります。",
+      replies:[
+        {tone:"敬意＋差異", txt:"その考え方は大事にしてきたんだね。私の世代だとこう感じる、っていうのも聞いてくれる？"},
+        {tone:"対立を避ける", txt:"どっちが正しいというより、見えてる景色が違うだけだと思うんだ。"},
+        {tone:"関係を主役に", txt:"考えは違っても、仲良くやっていきたいのは変わらないよ。"}
+      ],
+      tip:"目標は“説得して勝つ”ことではなく“違ったまま仲良くいる”こと。"
+    }
+  }
+];
+
+const DIR_LABEL = { p2c:"親 → 私（子）", c2p:"私（子）→ 親" };
+
+// generic fallback when no topic keyword matches
+function genericResult(dir, text){
+  const harsh = /(まだ|いつになったら|普通|常識|ちゃんと|なんで|どうして|だらしない|甘い|べき)/.test(text);
+  if(dir==="p2c"){
+    return {
+      level: harsh?2:1,
+      intent:"言葉はきつくても、根っこにあるのはたいてい「あなたが心配／大事」という気持ち。表現が不器用なだけのことが多いです。",
+      why:"親世代は感情をストレートに出すのが苦手で、心配が“小言・命令形”になって出がち。",
+      replies:[
+        {tone:"気持ちを汲む", txt:"心配してくれてるんだね、ありがとう。"},
+        {tone:"やわらかく線引き", txt:"気持ちは嬉しいよ。ただ、その言い方だと少し戸惑っちゃうな。"},
+        {tone:"会話を続ける", txt:"よかったら、どうしてそう思うのか聞かせてくれる？"}
+      ],
+      tip:"内容に反応する前に、まず“心配”という気持ちを一度受け取ると、たいていの会話は落ち着きます。"
+    };
+  } else {
+    return {
+      level: harsh?2:1,
+      intent:"（あなたの真意）言いたいことを、相手を傷つけずに伝えたい。",
+      why:"正論や強い言葉は、親に“否定された”と感じさせ、断絶を深めます。",
+      replies:[
+        {tone:"主語を自分に（Iメッセージ）", txt:"私はこう感じてるんだ、って伝えたくて。"},
+        {tone:"感謝を先に", txt:"いつも気にかけてくれてありがとう。その上で一つだけ聞いてほしいことがあって。"},
+        {tone:"関係を主役に", txt:"これからも仲良くやりたいから、正直に話すね。"}
+      ],
+      tip:"「あなたは〜」(Youメッセージ)を「私は〜」(Iメッセージ)に変えるだけで、非難が相談に変わります。"
+    };
+  }
+}
+
+function detectTopic(text){
+  let best=null, bestHits=0;
+  for(const t of TOPICS){
+    let hits=0;
+    for(const k of t.kw){ if(text.includes(k)) hits++; }
+    if(hits>bestHits){ bestHits=hits; best=t; }
+  }
+  return bestHits>0 ? best : null;
+}
+
+const EXAMPLES = {
+  p2c:["そろそろ結婚しないの？","いつになったら孫の顔見せてくれるの？","また転職するの？正社員にならないと","スマホの使い方がわからん、もういい","普通はこうするもんでしょ"],
+  c2p:["結婚を急かさないでほしい","今の働き方を認めてほしい","知らない番号は押す前に見せて","孫の話はもうやめてほしい","一度ちゃんと健康診断を受けてほしい"]
+};
+
+/* ============ UI logic ============ */
+let curDir = "p2c";
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+function toast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1600);
+}
+
+// tabs
+$$(".tab").forEach(b=>b.onclick=()=>{
+  $$(".tab").forEach(x=>x.classList.remove("active"));
+  $$(".panel").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  $("#"+b.dataset.tab).classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+// direction segment
+$$("#dir button").forEach(b=>b.onclick=()=>{
+  $$("#dir button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  curDir=b.dataset.dir;
+  renderExamples();
+});
+
+function renderExamples(){
+  $("#examples").innerHTML = EXAMPLES[curDir].map(e=>`<button class="chip" data-ex="${e}">${e}</button>`).join("");
+  $$("#examples .chip").forEach(c=>c.onclick=()=>{ $("#input").value=c.dataset.ex; translate(); });
+}
+
+function dots(level){
+  let h='<div class="dots">';
+  for(let i=1;i<=3;i++){ h+=`<span class="dot ${i<=level?('on'+level):''}"></span>`; }
+  h+='</div>'; return h;
+}
+const LV_TXT = {1:"低 — 落ち着いて通れるルート",2:"中 — 言い方に注意",3:"高 — 急がば回れ。一度本気で向き合う"};
+
+function translate(){
+  const text=$("#input").value.trim();
+  if(!text){ toast("メッセージを入力してください"); return; }
+  const topic=detectTopic(text);
+  const data = topic ? topic[curDir] : genericResult(curDir,text);
+  const topicName = topic ? `${topic.emoji} ${topic.name}` : "💬 一般的なやり取り";
+
+  let html = `<div class="card">`;
+  html += `<div class="res-block"><div class="res-label">話題の判定 ／ ${DIR_LABEL[curDir]}</div><div style="font-weight:700;font-size:16px">${topicName}</div></div>`;
+  html += `<div class="res-block"><div class="res-label">${curDir==="p2c"?"相手（親）の現在地 — 真意":"あなたの現在地 — 伝えたいこと"}</div><div class="intent">${data.intent}</div></div>`;
+  html += `<div class="res-block"><div class="res-label">なぜ地図がずれる？</div><div style="font-size:14px;color:var(--cp-text-muted)">${data.why}</div></div>`;
+  html += `<div class="res-block"><div class="res-label">断絶リスク</div><div class="meter">${dots(data.level)}<span class="meter-label">${LV_TXT[data.level]}</span></div></div>`;
+  html += `<div class="res-block"><div class="res-label">🧭 ${curDir==="p2c"?"おすすめの迂回ルート（返信案）":"おすすめの迂回ルート（伝え方）"}</div>`;
+  data.replies.forEach(r=>{
+    html += `<div class="reply"><button class="copy" data-c="${encodeURIComponent(r.txt)}">コピー</button><div class="tone">${r.tone}</div><div class="txt">${r.txt}</div></div>`;
+  });
+  html += `</div>`;
+  html += `<div class="tip">💡 <b>ヒント：</b>${data.tip}</div>`;
+  html += `</div>`;
+  $("#result").innerHTML=html;
+
+  $$("#result .copy").forEach(b=>b.onclick=()=>{
+    navigator.clipboard?.writeText(decodeURIComponent(b.dataset.c));
+    toast("コピーしました ✓");
+  });
+  $("#result").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("#go").onclick=translate;
+
+/* ===== Mine map ===== */
+function renderMine(){
+  $("#mineGrid").innerHTML = TOPICS.map(t=>
+    `<div class="topic" data-t="${t.id}"><div class="emoji">${t.emoji}</div><div class="name">${t.name}</div><div class="lv">地雷度 ${"★".repeat(t.lv)}${"☆".repeat(3-t.lv)}</div></div>`
+  ).join("");
+  $$("#mineGrid .topic").forEach(el=>el.onclick=()=>showMine(el.dataset.t));
+}
+function showMine(id){
+  const t=TOPICS.find(x=>x.id===id);
+  const a=t.p2c, b=t.c2p;
+  $("#mineDetail").innerHTML = `
+    <div class="card" style="margin-top:18px">
+      <div style="font-weight:800;font-size:18px;margin-bottom:10px">${t.emoji} ${t.name}</div>
+      <div class="res-label">親が言う側のとき（真意）</div>
+      <div class="intent" style="margin-bottom:6px">${a.intent}</div>
+      <div class="tip" style="margin-bottom:16px">💡 ${a.tip}</div>
+      <div class="res-label">あなたが伝える側のとき</div>
+      <div class="intent" style="margin-bottom:6px">${b.intent}</div>
+      <div class="tip">💡 ${b.tip}</div>
+    </div>`;
+  $("#mineDetail").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ===== Self update cards ===== */
+const UPDATE_CARDS=[
+  {q:"「転職を繰り返す＝根性なし」？",a:"今は3〜4年での転職は当たり前。むしろスキルと年収を上げる戦略的な選択。終身雇用はもう前提ではありません。"},
+  {q:"「リモートワーク＝サボり」？",a:"成果で評価する働き方が一般化。通勤時間ゼロで生産性が上がる人も多く、企業の正式な制度です。"},
+  {q:"「投資＝ギャンブル」？",a:"国がNISA・iDeCoで推奨するほど。長期・分散・積立なら、貯金だけより堅実に将来へ備える手段です。"},
+  {q:"「既読スルー＝失礼」？",a:"今は“すぐ返さなくてOK”が共通認識。読んだら必ず即返信、という文化はむしろ薄れています。"},
+  {q:"「事実婚・選択的別姓＝非常識」？",a:"多様な家族の形の一つとして広く受け入れられつつあります。法整備も進行中で、“普通”の幅が広がっています。"},
+  {q:"「いい大学→大企業→定年」が幸せ？",a:"幸せの形は人それぞれに。フリーランス・起業・地方移住など、ルートは一本道ではなくなりました。"},
+  {q:"「家事・育児は女性が中心」？",a:"共働きが多数派の今、分担が前提。男性育休も制度化が進み、“当たり前”が更新されています。"},
+  {q:"「電話しないと失礼」？",a:"今はテキスト連絡が主流で、いきなりの電話は相手の時間を奪う行為とされることも。一言メッセージが丁寧です。"}
+];
+function renderUpdate(){
+  $("#updateGrid").innerHTML = UPDATE_CARDS.map((c,i)=>`
+    <div class="flip" data-i="${i}">
+      <div class="flip-in">
+        <div class="flip-face"><div class="flip-q">${c.q}</div><div class="flip-hint">タップで答え →</div></div>
+        <div class="flip-face flip-back"><div class="flip-a">${c.a}</div></div>
+      </div>
+    </div>`).join("");
+  $$("#updateGrid .flip").forEach(el=>el.onclick=()=>el.classList.toggle("flipped"));
+}
+
+/* ===== Mental check ===== */
+const QUESTIONS=[
+  "親（子）とのやり取りの後、気分が落ち込むことがある",
+  "連絡が来ると、内容を見る前に身構えてしまう",
+  "言いたいことを我慢して、後で疲れてしまう",
+  "「自分が悪いのかも」と責めてしまうことがある",
+  "この関係について、誰かに相談したいと思うことがある"
+];
+const OPTS=[{t:"ない",v:0},{t:"たまに",v:1},{t:"よくある",v:2},{t:"いつも",v:3}];
+function renderQuiz(){
+  $("#quiz").innerHTML = QUESTIONS.map((q,i)=>`
+    <div class="q"><p>Q${i+1}. ${q}</p>
+      <div class="opts">${OPTS.map(o=>`<label><input type="radio" name="q${i}" value="${o.v}"><span>${o.t}</span></label>`).join("")}</div>
+    </div>`).join("") + `<button class="btn" id="calc">結果を見る</button>`;
+  $("#calc").onclick=calcMental;
+}
+function calcMental(){
+  let score=0,answered=0;
+  QUESTIONS.forEach((_,i)=>{
+    const sel=document.querySelector(`input[name="q${i}"]:checked`);
+    if(sel){ score+=+sel.value; answered++; }
+  });
+  if(answered<QUESTIONS.length){ toast("すべての質問に答えてください"); return; }
+  let verdict, advice, color;
+  if(score<=3){ verdict="ひとまず良好"; color="var(--cp-success)";
+    advice="今のところ大きな負担は少なめ。トランスレーターや地雷マップで“予防”を続けましょう。"; }
+  else if(score<=8){ verdict="少し疲れ気味"; color="var(--cp-warning)";
+    advice="我慢が積もり始めているかも。返信テンプレで消耗を減らし、しんどい話題は地雷マップで備えを。月1の傾聴チャットもおすすめです。"; }
+  else { verdict="かなり消耗しています"; color="var(--cp-danger)";
+    advice="一人で抱えるのは危険信号。ヨリソイの傾聴員・公認心理師への相談を強くおすすめします。あなたは悪くありません。"; }
+  $("#mentalResult").innerHTML=`
+    <div class="card score-box" style="margin-top:18px">
+      <div class="res-label">あなたのスコア（0〜15）</div>
+      <div class="score-num" style="color:${color}">${score}</div>
+      <div style="font-weight:800;font-size:18px;margin:4px 0 10px">${verdict}</div>
+      <div style="font-size:14.5px;color:var(--cp-text-muted)">${advice}</div>
+      ${score>8?`<button class="btn" style="margin-top:16px" onclick="document.getElementById('toast').textContent='（デモ）相談予約画面へ遷移します';document.getElementById('toast').classList.add('show');setTimeout(()=>document.getElementById('toast').classList.remove('show'),1800)">💬 相談を予約する（デモ）</button>`:''}
+    </div>`;
+  $("#mentalResult").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ===== Oasis: 親の"好き"発見 ===== */
+const ERAS = [
+  { id:"1940s", label:"1940年代生まれ", sub:"（戦中・戦後）",
+    ctx:"物のない時代に幼少期を過ごし、「もったいない」「我慢」「家族と健康が一番」が体に染みついた世代。倹約や小言の裏には“あなたに同じ苦労をさせたくない”という深い愛情があります。" },
+  { id:"1950s", label:"1950年代生まれ", sub:"（団塊前後）",
+    ctx:"高度経済成長とともに育ち、「頑張れば報われる」「会社は家族」を信じてきた世代。歌謡曲・映画の黄金期に青春を過ごし、努力と帰属を大切にします。" },
+  { id:"1960s", label:"1960年代生まれ", sub:"（昭和後期）",
+    ctx:"テレビやマイカーが普及した豊かさの中で育ち、バブルとその崩壊を現役で経験。仕事も家庭も全力で支えてきた“家族サービス世代”。実は新しいものへの好奇心も旺盛です。" },
+  { id:"1970s", label:"1970年代生まれ", sub:"（安定成長期）",
+    ctx:"安定成長期に育ち、就職氷河期も知る世代。趣味も価値観も多様で、デジタルにも比較的なじみがあります。対等な会話を喜ぶことが多いです。" }
+];
+
+const INTERESTS = [
+  { id:"travel", emoji:"✈️", name:"旅行・温泉",
+    talk:"「今まで行った中で一番よかった場所どこ？」と昔の旅の話を聞くと、楽しそうに語ってくれます。",
+    do:"近場の日帰り温泉や、親の故郷を一緒に訪ねる小旅行。移動中の会話そのものがオアシスに。",
+    gift:"温泉旅行券、ご当地グルメのお取り寄せ、軽くて使いやすい旅行バッグ。",
+    yorisoi:"“どこに行くか”より“一緒に行く”ことが何よりの贈り物。予定を立てる相談から巻き込むと喜ばれます。" },
+  { id:"cook", emoji:"🍳", name:"料理・グルメ",
+    talk:"「あの煮物、どうやって作るの？」と“教わる側”に回ると、親は誇らしげに話してくれます。",
+    do:"実家の味を一緒に作って動画で記録。レシピの口伝は最高の親孝行になります。",
+    gift:"少し良い調味料、使いやすい調理器具、二人で行く食事。",
+    yorisoi:"親の手料理を「美味しい」と伝えるのは、存在を肯定する一番シンプルな言葉です。" },
+  { id:"garden", emoji:"🌱", name:"園芸・家庭菜園",
+    talk:"「今、何育ててるの？」と写真を見せてもらうと話が弾みます。収穫の話は鉄板。",
+    do:"一緒に苗を植える、できた野菜を一緒に食べる。世話の報告を聞くだけでも◎。",
+    gift:"育てやすい花の苗、園芸グローブ、ガーデニング雑誌。",
+    yorisoi:"親が育てたものに関心を持つことは、親の“今の楽しみ”に寄り添うこと。" },
+  { id:"history", emoji:"🏯", name:"歴史・時代劇",
+    talk:"「好きな武将（時代劇）って誰？」と聞くと、うんちくと共に上機嫌に。",
+    do:"大河ドラマを一緒に観る、史跡や城を巡る。解説してもらう役に回ると喜ばれます。",
+    gift:"歴史小説、時代劇のDVD、城めぐりの旅。",
+    yorisoi:"“教えてもらう”姿勢が、親の知識と人生経験への敬意になります。" },
+  { id:"music", emoji:"🎤", name:"歌謡曲・カラオケ",
+    talk:"「若い頃に流行ってた歌教えて」と聞き、一緒に聴くと当時の思い出話に広がります。",
+    do:"カラオケに一緒に行く、思い出の曲のプレイリストを作って贈る。",
+    gift:"好きな歌手のCD・コンサートチケット、歌詞集。",
+    yorisoi:"親の青春の音楽を一緒に聴くと、“若かった頃の親”に出会えて距離が縮まります。" },
+  { id:"sports", emoji:"⚾", name:"スポーツ観戦",
+    talk:"「今年の贔屓のチームどう？」と勝敗の話を振ると盛り上がります。",
+    do:"一緒に試合観戦やテレビ応援。勝った日の電話は機嫌が良くおすすめ。",
+    gift:"応援チームのグッズ、観戦チケット、ファングッズ。",
+    yorisoi:"同じものを一緒に応援する時間は、言葉がなくても心が通う貴重なオアシスです。" },
+  { id:"health", emoji:"♨️", name:"健康・体操",
+    talk:"「最近の調子どう？」より「何か運動してる？」の方が前向きに話せます。",
+    do:"一緒に散歩、ラジオ体操、健康番組の話題を共有。",
+    gift:"歩数計、マッサージ機、履きやすい靴。",
+    yorisoi:"健康を気遣うときは“心配”より“一緒に元気でいようね”と未来を向いた言葉で。" },
+  { id:"camera", emoji:"📷", name:"写真・カメラ",
+    talk:"「最近撮った写真見せて」と頼むと、撮影スポットの話で盛り上がります。",
+    do:"一緒に撮影散歩、撮った写真をフォトブックにして贈る。",
+    gift:"フォトフレーム、写真プリント、カメラ用品。",
+    yorisoi:"親が撮った世界を見せてもらうことは、親の“まなざし”に寄り添うこと。" },
+  { id:"fishing", emoji:"🎣", name:"釣り・アウトドア",
+    talk:"「最近どこ行った？何釣れた？」と成果を聞くと笑顔に。",
+    do:"一緒に釣りや散策。早朝の静かな時間の会話は格別です。",
+    gift:"釣具、防寒ウェア、アウトドア用品。",
+    yorisoi:"無口でも隣にいる時間そのものが、親にとってのオアシスになります。" },
+  { id:"drama", emoji:"📺", name:"ドラマ・映画",
+    talk:"「今ハマってるドラマある？」と聞き、感想を交換すると会話が続きます。",
+    do:"同じ作品を観て感想をLINEで送り合う。離れていてもつながれます。",
+    gift:"配信サービスのギフト、好きな俳優の作品、映画チケット。",
+    yorisoi:"同じ物語を共有すると、毎週“話す理由”が自然に生まれます。" },
+  { id:"craft", emoji:"🧵", name:"手芸・ものづくり",
+    talk:"「それ手作り？すごいね」と作品を褒めると会話が広がります。",
+    do:"作り方を教わる、一緒に作品を作る、できた物を実際に使う。",
+    gift:"上質な材料、道具、作品を飾る額。",
+    yorisoi:"親の作品を“使う・飾る”ことは、最高の「ありがとう」の形です。" },
+  { id:"temple", emoji:"⛩️", name:"神社仏閣・御朱印",
+    talk:"「最近お参り行った？」と聞くと、御朱印やご利益の話で和みます。",
+    do:"一緒にお参り・御朱印めぐり。歩きながらの会話がオアシスに。",
+    gift:"御朱印帳、お守り、巡礼ガイド本。",
+    yorisoi:"親が心を寄せる場所に一緒に立つと、価値観の“ルーツ”が見えてきます。" }
+];
+
+function renderOasisInputs(){
+  document.querySelector("#era").innerHTML = ERAS.map((e,i)=>
+    `<button data-era="${e.id}" class="${i===1?'active':''}" style="flex:1 1 45%">${e.label}<br><small style="font-weight:500;color:var(--cp-text-muted)">${e.sub}</small></button>`).join("");
+  document.querySelectorAll("#era button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#era button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+  });
+  document.querySelector("#interestChips").innerHTML = INTERESTS.map(it=>
+    `<button class="chip" data-int="${it.id}">${it.emoji} ${it.name}</button>`).join("");
+  document.querySelectorAll("#interestChips .chip").forEach(c=>c.onclick=()=>c.classList.toggle("sel"));
+}
+
+function findOasis(){
+  const era = ERAS.find(e=>e.id===document.querySelector("#era button.active")?.dataset.era) || ERAS[1];
+  const picked = [...document.querySelectorAll("#interestChips .chip.sel")].map(c=>c.dataset.int);
+  if(picked.length===0){ toast("「好きなこと」を1つ以上選んでください"); return; }
+  const items = INTERESTS.filter(it=>picked.includes(it.id));
+
+  let html = `<div class="card" style="margin-top:18px">`;
+  html += `<div class="res-label">親の現在地 — 育った時代の物語</div>`;
+  html += `<div class="intent" style="margin-bottom:6px"><b>${era.label}${era.sub}</b><br>${era.ctx}</div>`;
+  html += `<div class="tip">💡 価値観の小言も、たどればこの時代から来ています。背景がわかると“責める気持ち”が“わかってあげたい”に変わります。</div>`;
+  html += `</div>`;
+
+  items.forEach(it=>{
+    html += `<div class="card">
+      <div style="font-weight:800;font-size:17px;margin-bottom:10px">${it.emoji} ${it.name}</div>
+      <div class="oasis-row"><span class="oasis-ic">💬</span><div><b>会話の糸口</b><br>${it.talk}</div></div>
+      <div class="oasis-row"><span class="oasis-ic">🤝</span><div><b>一緒にできること</b><br>${it.do}</div></div>
+      <div class="oasis-row"><span class="oasis-ic">🎁</span><div><b>贈り物ヒント</b><br>${it.gift}</div></div>
+      <div class="tip" style="margin-top:6px">💗 <b>寄り添いのコツ：</b>${it.yorisoi}</div>
+    </div>`;
+  });
+
+  html += `<div class="card" style="background:var(--cp-accent-soft);border-color:var(--cp-accent)">
+    <div style="font-weight:800;font-size:16px;margin-bottom:6px">🧭 ヨリソイからの一言</div>
+    <div style="font-size:14.5px">相手を変えようとするのをやめて、<b>相手の“好き”に一歩近づく</b>。それが断絶を越える最短ルートです。今日、ここで見つけた話題を一つ、声に出してみてください。</div>
+  </div>`;
+
+  document.querySelector("#oasisResult").innerHTML = html;
+  document.querySelector("#oasisResult").scrollIntoView({behavior:"smooth",block:"start"});
+}
+document.querySelector("#oasisGo").onclick = findOasis;
+
+/* init */
+renderExamples(); renderMine(); renderUpdate(); renderQuiz(); renderOasisInputs();
+</script>
+</body>
+</html>
